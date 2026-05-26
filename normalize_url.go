@@ -1,8 +1,8 @@
 package main
 
 import (
-	"net/url"
 	"fmt"
+	"net/url"
 	"strings"
 )
 
