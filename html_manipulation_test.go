@@ -1,9 +1,9 @@
 package main
 
 import (
-	"testing"
-	"reflect"
 	"net/url"
+	"reflect"
+	"testing"
 )
 
 func TestGetHeadingFromHTMLBasic(t *testing.T) {
@@ -166,11 +166,11 @@ func TestGetImagesFromHTMLRelative(t *testing.T) {
 	inputURL := "https://crawler-test.com"
 	inputBody := `<html><body><img src="/logo.png" alt="Logo"></body></html>`
 
-    baseURL, err := url.Parse(inputURL)
-    if err != nil {
-        t.Errorf("couldn't parse input URL: %v", err)
-        return
-    }
+	baseURL, err := url.Parse(inputURL)
+	if err != nil {
+		t.Errorf("couldn't parse input URL: %v", err)
+		return
+	}
 
 	actual, err := getImagesFromHTML(inputBody, baseURL)
 	if err != nil {
@@ -187,11 +187,11 @@ func TestGetImagesFromHTMLMultiple(t *testing.T) {
 	inputURL := "https://crawler-test.com"
 	inputBody := `<html><body><img src="/logo.png" alt="Logo"><img src="https://crawler-test.com/short.png" alt="Short"></body></html>`
 
-    baseURL, err := url.Parse(inputURL)
-    if err != nil {
-        t.Errorf("couldn't parse input URL: %v", err)
-        return
-    }
+	baseURL, err := url.Parse(inputURL)
+	if err != nil {
+		t.Errorf("couldn't parse input URL: %v", err)
+		return
+	}
 
 	actual, err := getImagesFromHTML(inputBody, baseURL)
 	if err != nil {
@@ -208,11 +208,11 @@ func TestGetImagesFromHTMLEmpty(t *testing.T) {
 	inputURL := "https://crawler-test.com"
 	inputBody := `<html><body></body></html>`
 
-    baseURL, err := url.Parse(inputURL)
-    if err != nil {
-        t.Errorf("couldn't parse input URL: %v", err)
-        return
-    }
+	baseURL, err := url.Parse(inputURL)
+	if err != nil {
+		t.Errorf("couldn't parse input URL: %v", err)
+		return
+	}
 
 	actual, err := getImagesFromHTML(inputBody, baseURL)
 	if err != nil {
@@ -222,5 +222,75 @@ func TestGetImagesFromHTMLEmpty(t *testing.T) {
 	expected := []string{}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("expected %v, got %v", expected, actual)
+	}
+}
+
+func TestExtractPageData(t *testing.T) {
+	inputURL := "https://crawler-test.com"
+	inputBody := `<html><body>
+        <h1>Test Title</h1>
+        <p>This is the first paragraph.</p>
+        <a href="/link1">Link 1</a>
+        <img src="/image1.jpg" alt="Image 1">
+    </body></html>`
+
+	actual := extractPageData(inputBody, inputURL)
+
+	expected := PageData{
+		URL:            "https://crawler-test.com",
+		Heading:        "Test Title",
+		FirstParagraph: "This is the first paragraph.",
+		OutgoingLinks:  []string{"https://crawler-test.com/link1"},
+		ImageURLs:      []string{"https://crawler-test.com/image1.jpg"},
+	}
+
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("expected %+v, got %+v", expected, actual)
+	}
+}
+
+func TestExtractPageEmpty(t *testing.T) {
+	inputURL := "https://crawler-test.com"
+	inputBody := "<html</html>"
+
+	actual := extractPageData(inputBody, inputURL)
+
+	expected := PageData{
+		URL:            "https://crawler-test.com",
+		Heading:        "",
+		FirstParagraph: "",
+		OutgoingLinks:  []string{},
+		ImageURLs:      []string{},
+	}
+
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("expected %+v, got %+v", expected, actual)
+	}
+}
+
+func TestExtractPageDataMultiple(t *testing.T) {
+	inputURL := "https://crawler-test.com"
+	inputBody := `<html><body>
+        <h1>Test Title</h1>
+        <p>This is the first paragraph.</p>
+		<p>This is the Second paragraph.</p>
+        <a href="/link1">Link 1</a>
+		<a href="https://crawler-test.com/link2">Link 2</a>
+        <img src="/image1.jpg" alt="Image 1">
+		<img src="https://crawler-test.com/image2.jpg" alt="Image 2">
+    </body></html>`
+
+	actual := extractPageData(inputBody, inputURL)
+
+	expected := PageData{
+		URL:            "https://crawler-test.com",
+		Heading:        "Test Title",
+		FirstParagraph: "This is the first paragraph.",
+		OutgoingLinks:  []string{"https://crawler-test.com/link1", "https://crawler-test.com/link2"},
+		ImageURLs:      []string{"https://crawler-test.com/image1.jpg", "https://crawler-test.com/image2.jpg"},
+	}
+
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("expected %+v, got %+v", expected, actual)
 	}
 }

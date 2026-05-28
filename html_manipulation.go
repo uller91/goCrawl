@@ -7,6 +7,14 @@ import (
 	"strings"
 )
 
+type PageData struct {
+	URL            string
+	Heading        string
+	FirstParagraph string
+	OutgoingLinks  []string
+	ImageURLs      []string
+}
+
 func getHeadingFromHTML(html string) string {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(html))
 	if err != nil {
@@ -87,5 +95,32 @@ func getImagesFromHTML(htmlBody string, baseURL *url.URL) ([]string, error) {
 }
 
 func extractPageData(html, pageURL string) PageData {
-	
+	baseURL, err := url.Parse(pageURL)
+	if err != nil {
+		fmt.Errorf("couldn't parse input URL: %v", err)
+		return PageData{}
+	}
+
+	heading := getHeadingFromHTML(html)
+	paragraph := getFirstParagraphFromHTML(html)
+	outgoingLinks, err := getURLsFromHTML(html, baseURL)
+	if err != nil {
+		fmt.Errorf("couldn't parse outgoing links: %v", err)
+		return PageData{}
+	}
+	imageURLs, err := getImagesFromHTML(html, baseURL)
+	if err != nil {
+		fmt.Errorf("couldn't parse outgoing links: %v", err)
+		return PageData{}
+	}
+
+	pageData := PageData{
+		URL:            pageURL,
+		Heading:        heading,
+		FirstParagraph: paragraph,
+		OutgoingLinks:  outgoingLinks,
+		ImageURLs:      imageURLs,
+	}
+
+	return pageData
 }
