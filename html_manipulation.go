@@ -64,7 +64,12 @@ func getURLsFromHTML(htmlBody string, baseURL *url.URL) ([]string, error) {
 		if strings.HasPrefix(urlLink, baseURLstring) {
 			links = append(links, urlLink)
 		} else {
-			urlLinkAbsolute := baseURLstring + urlLink
+			urlLinkUrl, err := url.Parse(urlLink)
+			if err != nil {
+				fmt.Errorf("couldn't parse input URL: %v", err)
+				return
+			}
+			urlLinkAbsolute := (baseURL.ResolveReference(urlLinkUrl)).String()
 			links = append(links, urlLinkAbsolute)
 		}
 	})
@@ -80,17 +85,22 @@ func getImagesFromHTML(htmlBody string, baseURL *url.URL) ([]string, error) {
 
 	baseURLstring := baseURL.String()
 	links := []string{}
+	//body := doc.Find("main")
 	doc.Find("img[src]").Each(func(_ int, s *goquery.Selection) {
 		imgLink, _ := s.Attr("src")
 		if strings.HasPrefix(imgLink, baseURLstring) {
 			links = append(links, imgLink)
 		} else {
-			imgLinkAbsolute := baseURLstring + imgLink
+			impLinkUrl, err := url.Parse(imgLink)
+			if err != nil {
+				fmt.Errorf("couldn't parse input URL: %v", err)
+				return
+			}
+			imgLinkAbsolute := (baseURL.ResolveReference(impLinkUrl)).String()
 			links = append(links, imgLinkAbsolute)
 		}
 	})
 
-	fmt.Println(links)
 	return links, nil
 }
 
