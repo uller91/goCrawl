@@ -4,11 +4,78 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
+	"net/url"
 	"slices"
+	"strings"
+	"sync"
 )
 
-func crawlPage(rawBaseURL, rawCurrentURL string, pages map[string]int) {
+type config struct {
+	pages              map[string]PageData
+	baseURL            *url.URL
+	mu                 *sync.Mutex
+	concurrencyControl chan struct{}
+	wg                 *sync.WaitGroup
+}
+
+func (cfg *config) crawlPage(rawCurrentURL string) {
+	cfg.concurrencyControl <- struct{}{}
+	defer func() {
+		<-cfg.concurrencyControl // release slot
+		cfg.wg.Done()            // signal done
+	}()
+
+	if !strings.HasPrefix(rawCurrentURL, cfg.baseURL.String()) {
+		return
+	}
+
+	normCurrentURL, err := normalizeURL(rawCurrentURL)
+	if err != nil {
+		fmt.Printf("error during URL normalization: %v", err)
+		return
+	}
+
+	isFirst := cfg.addPageVisit(normCurrentURL)
+	if !isFirst {
+		return
+	}
+
+	fmt.Printf("Fetching HTML from %v...\n", rawCurrentURL)
+	pageHTML, err := getHTML(rawCurrentURL)
+	if err != nil {
+		fmt.Printf("error getting HTML from %v URL: %v", rawCurrentURL, err)
+		return
+	}
+	pageData := extractPageData(pageHTML, rawCurrentURL)
+	cfg.mu.Lock()
+	cfg.pages[normCurrentURL] = pageData
+	cfg.mu.Unlock()
+
+	for _, imageURL := range pageData.ImageURLs {
+		cfg.wg.Add(1)
+		go cfg.crawlPage(imageURL)
+	}
+
+	for _, outgoingLink := range pageData.OutgoingLinks {
+		cfg.wg.Add(1)
+		go cfg.crawlPage(outgoingLink)
+	}
+
+}
+
+func (cfg *config) addPageVisit(normalizedURL string) (isFirst bool) {
+	cfg.mu.Lock()
+	_, exist := cfg.pages[normalizedURL]
+	if !exist {
+		cfg.pages[normalizedURL] = PageData{}
+	}
+	cfg.mu.Unlock()
+	isFirst = !exist
+	return isFirst
+}
+
+/*
+func crawlPageNoConcurency(rawBaseURL, rawCurrentURL string, pages map[string]int) {
 	if !strings.HasPrefix(rawCurrentURL, rawBaseURL) {
 		return
 	}
@@ -25,7 +92,6 @@ func crawlPage(rawBaseURL, rawCurrentURL string, pages map[string]int) {
 		pages[normCurrentURL] = count
 		return
 	} else {
-
 		pages[normCurrentURL] = 1
 	}
 
@@ -39,13 +105,14 @@ func crawlPage(rawBaseURL, rawCurrentURL string, pages map[string]int) {
 	pageData := extractPageData(pageHTML, rawCurrentURL)
 	//fmt.Println(pageData)
 	for _, imageURL := range pageData.ImageURLs {
-		crawlPage(rawBaseURL, imageURL, pages)
+		crawlPageNoConcurency(rawBaseURL, imageURL, pages)
 	}
 
 	for _, outgoingLink := range pageData.OutgoingLinks {
-		crawlPage(rawBaseURL, outgoingLink, pages)
+		crawlPageNoConcurency(rawBaseURL, outgoingLink, pages)
 	}
 }
+*/
 
 func getHTML(rawURL string) (string, error) {
 	client := &http.Client{}
