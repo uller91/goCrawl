@@ -5,20 +5,36 @@ import (
 	"net/url"
 	"os"
 	"sync"
+	"strconv"
 )
 
 func main() {
 	args := os.Args[1:]
-	if len(args) < 1 {
-		fmt.Println("no website provided")
+	switch len(args) {
+	case 0:
+		fmt.Println("No website provided")
 		os.Exit(1)
-	} else if len(args) > 1 {
-		fmt.Println("too many arguments provided")
+	case 1, 2:
+		fmt.Println("Required arguments: URL maxConcurrency maxPages")
+		os.Exit(1)
+	case 3:
+		fmt.Printf("starting crawl of: %s\n", args[0])
+	default:
+		fmt.Println("Too many arguments provided! Required arguments: URL maxConcurrency maxPages")
 		os.Exit(1)
 	}
 
 	argURL := args[0]
-	fmt.Printf("starting crawl of: %s\n", argURL)
+	argMaxConcurrency, err := strconv.Atoi(args[1])
+	if err != nil {
+		fmt.Println("maxConcurrency is not int!")
+		os.Exit(1)
+	}
+	argMaxPages, err := strconv.Atoi(args[2])
+	if err != nil {
+		fmt.Println("maxPages is not int!")
+		os.Exit(1)
+	}
 
 	pages := make(map[string]PageData)
 	baseURL, err := url.Parse(argURL)
@@ -26,7 +42,7 @@ func main() {
 		fmt.Errorf("couldn't parse input URL: %v", err)
 		return
 	}
-	concurrencyControl := make(chan struct{}, 20)
+	concurrencyControl := make(chan struct{}, argMaxConcurrency)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
@@ -36,6 +52,7 @@ func main() {
 		mu:                 &mu,
 		concurrencyControl: concurrencyControl,
 		wg:                 &wg,
+		maxPages:			argMaxPages,
 	}
 
 	cfg.wg.Add(1)

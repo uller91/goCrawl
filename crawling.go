@@ -16,6 +16,7 @@ type config struct {
 	mu                 *sync.Mutex
 	concurrencyControl chan struct{}
 	wg                 *sync.WaitGroup
+	maxPages 		   int
 }
 
 func (cfg *config) crawlPage(rawCurrentURL string) {
@@ -24,6 +25,15 @@ func (cfg *config) crawlPage(rawCurrentURL string) {
 		<-cfg.concurrencyControl // release slot
 		cfg.wg.Done()            // signal done
 	}()
+
+	cfg.mu.Lock()
+	//fmt.Println(len(cfg.pages))
+	if len(cfg.pages) >= cfg.maxPages {
+		//fmt.Println("done!")
+		cfg.mu.Unlock()
+		return
+	}
+	cfg.mu.Unlock()
 
 	if !strings.HasPrefix(rawCurrentURL, cfg.baseURL.String()) {
 		return
