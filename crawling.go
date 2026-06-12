@@ -16,7 +16,7 @@ type config struct {
 	mu                 *sync.Mutex
 	concurrencyControl chan struct{}
 	wg                 *sync.WaitGroup
-	maxPages 		   int
+	maxPages           int
 }
 
 func (cfg *config) crawlPage(rawCurrentURL string) {

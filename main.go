@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"sync"
 	"strconv"
+	"sync"
 )
 
 func main() {
@@ -52,7 +52,7 @@ func main() {
 		mu:                 &mu,
 		concurrencyControl: concurrencyControl,
 		wg:                 &wg,
-		maxPages:			argMaxPages,
+		maxPages:           argMaxPages,
 	}
 
 	cfg.wg.Add(1)
@@ -65,26 +65,9 @@ func main() {
 		fmt.Printf("%s: %s\n", pageURL, page.Heading)
 	}
 
-	/*
-		crawlPage(url, url, pages)
-
-		fmt.Println("")
-		fmt.Println("Total ctawled:\n")
-		for key, val := range pages {
-			fmt.Printf("%s: %v\n", key, val)
-		}
-	*/
-
-	/*
-		html, err := getHTML(url)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		//fmt.Println(html)
-
-		pageData := extractPageData(html, url)
-		fmt.Println(pageData)
-	*/
-
+	err = writeJSONReport(cfg.pages, "report.json")
+	if err != nil {
+		fmt.Errorf("couldn't write JSON report: %v", err)
+		return
+	}
 }
